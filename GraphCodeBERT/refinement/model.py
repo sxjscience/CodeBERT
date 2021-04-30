@@ -92,7 +92,7 @@ class Seq2Seq(nn.Module):
                 input_ids=beam.getCurrentState()
                 context=context.repeat(1, self.beam_size,1)
                 context_mask=context_mask.repeat(self.beam_size,1)
-                for _ in range(self.max_length): 
+                for j in range(self.max_length):
                     if beam.done():
                         break
                     attn_mask=-1e4 *(1-self.bias[:input_ids.shape[1],:input_ids.shape[1]])
@@ -101,6 +101,7 @@ class Seq2Seq(nn.Module):
                     out = torch.tanh(self.dense(out))
                     hidden_states=out.permute([1,0,2]).contiguous()[:,-1,:]
                     out = self.lsm(self.lm_head(hidden_states)).data
+                    print('j=', j, 'out=', out)
                     beam.advance(out)
                     input_ids.data.copy_(input_ids.data.index_select(0, beam.getCurrentOrigin()))
                     input_ids=torch.cat((input_ids,beam.getCurrentState()),-1)
