@@ -577,13 +577,13 @@ def main():
 
             model.eval() 
             p=[]
-            for batch in tqdm(eval_dataloader,total=len(eval_dataloader)):
+            for batch in eval_dataloader:
                 batch = tuple(t.to(device) for t in batch)
-                print('batch=', batch)
-                source_ids,source_mask,position_idx,att_mask,target_ids,target_mask = batch                    
+                source_ids,source_mask,position_idx,att_mask,target_ids,target_mask = batch
                 with torch.no_grad():
-                    preds = model(source_ids,source_mask,position_idx,att_mask)  
+                    preds = model(source_ids,source_mask,position_idx,att_mask)
                     for pred in preds:
+                        print('pred=', pred)
                         t=pred[0].cpu().numpy()
                         t=list(t)
                         if 0 in t:
