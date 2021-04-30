@@ -576,37 +576,42 @@ def main():
             eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size,num_workers=4)
 
             model.eval() 
-            p=[]
-            for idx, batch in enumerate(eval_dataloader):
-                print('idx=', idx)
+            beam_predictions = [[] for _ in range(args.beam_size)]
+            for batch in tqdm(eval_dataloader, total=len(eval_dataloader)):
                 batch = tuple(t.to(device) for t in batch)
                 source_ids,source_mask,position_idx,att_mask,target_ids,target_mask = batch
                 with torch.no_grad():
                     preds = model(source_ids,source_mask,position_idx,att_mask)
                     for pred in preds:
-                        print('pred=', pred)
-                        t=pred[0].cpu().numpy()
-                        t=list(t)
-                        if 0 in t:
-                            t=t[:t.index(0)]
-                        text = tokenizer.decode(t,clean_up_tokenization_spaces=False)
-                        p.append(text)
+                        for bid in range(args.beam_size):
+                            t = pred[bid].cpu().numpy()
+                            t = list(t)
+                            if 0 in t:
+                                t = t[:t.index(0)]
+                            text = tokenizer.decode(t, clean_up_tokenization_spaces=False)
+                            beam_predictions[bid].append(text)
             model.train()
-            predictions=[]
-            accs=[]
-            with open(os.path.join(args.output_dir,"test_{}.output".format(str(idx))),'w') as f, open(os.path.join(args.output_dir,"test_{}.gold".format(str(idx))),'w') as f1:
-                for ref,gold in zip(p,eval_examples):
-                    predictions.append(ref)
-                    f.write(ref+'\n')
-                    f1.write(gold.target+'\n')    
-                    accs.append(ref==gold.target)
-            dev_bleu=round(_bleu(os.path.join(args.output_dir, "test_{}.gold".format(str(idx))).format(file), 
-                                 os.path.join(args.output_dir, "test_{}.output".format(str(idx))).format(file)),2)
+            accs = [[] for _ in range(args.beam_size)]
+            with open(os.path.join(args.output_dir, "test_{}.gold".format(str(idx))), 'w') as f1:
+                f1.write(gold.target.strip() + '\n')
+            for bid in range(args.beam_size):
+                with open(os.path.join(args.output_dir,
+                                       "test_{}.output.{}".format(str(idx), bid)), 'w') as f:
+                    for j, (ref, gold) in enumerate(zip(beam_predictions[bid], eval_examples)):
+                        f.write(ref.strip() + '\n')
+                        if bid == 0:
+                            correct = ref == gold.target
+                        else:
+                            correct = accs[bid - 1][j] or (ref == gold.target)
+                        accs[bid].append(correct)
+            dev_bleu=round(_bleu(os.path.join(args.output_dir, "test_{}.gold".format(str(idx))).format(file),
+                                 os.path.join(args.output_dir, "test_{}.output.0".format(str(idx))).format(file)), 2)
             logger.info("  %s = %s "%("bleu-4",str(dev_bleu)))
-            logger.info("  %s = %s "%("xMatch",str(round(np.mean(accs)*100,4))))
-            logger.info("  "+"*"*20)   
-            
+            for bid in range(args.beam_size):
+                logger.info("  %s (top-%d) = %s " % ("xMatch", bid + 1,
+                                                     str(round(np.mean(accs[bid]) * 100, 4))))
+            logger.info("  "+"*"*20)
+
+
 if __name__ == "__main__":
     main()
-
-
