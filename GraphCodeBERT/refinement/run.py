@@ -577,7 +577,8 @@ def main():
 
             model.eval() 
             p=[]
-            for batch in eval_dataloader:
+            for idx, batch in enumerate(eval_dataloader):
+                print('idx=', idx)
                 batch = tuple(t.to(device) for t in batch)
                 source_ids,source_mask,position_idx,att_mask,target_ids,target_mask = batch
                 with torch.no_grad():
