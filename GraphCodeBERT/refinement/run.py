@@ -583,6 +583,7 @@ def main():
                 with torch.no_grad():
                     preds = model(source_ids,source_mask,position_idx,att_mask)  
                     for pred in preds:
+                        print('pred.shape=', pred.shape)
                         t=pred[0].cpu().numpy()
                         t=list(t)
                         if 0 in t:

@@ -101,7 +101,6 @@ class Seq2Seq(nn.Module):
                     out = torch.tanh(self.dense(out))
                     hidden_states=out.permute([1,0,2]).contiguous()[:,-1,:]
                     out = self.lsm(self.lm_head(hidden_states)).data
-                    print('j=', j, 'out=', out)
                     beam.advance(out)
                     input_ids.data.copy_(input_ids.data.index_select(0, beam.getCurrentOrigin()))
                     input_ids=torch.cat((input_ids,beam.getCurrentState()),-1)
