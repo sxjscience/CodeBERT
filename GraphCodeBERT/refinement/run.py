@@ -593,7 +593,8 @@ def main():
             model.train()
             accs = [[] for _ in range(args.beam_size)]
             with open(os.path.join(args.output_dir, "test_{}.gold".format(str(idx))), 'w') as f1:
-                f1.write(gold.target.strip() + '\n')
+                for gold in eval_examples:
+                    f1.write(gold.target.strip() + '\n')
             for bid in range(args.beam_size):
                 with open(os.path.join(args.output_dir,
                                        "test_{}.output.{}".format(str(idx), bid)), 'w') as f:
